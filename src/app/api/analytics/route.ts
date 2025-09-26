@@ -231,7 +231,7 @@ export async function GET(req: NextRequest) {
           active: currentCustomers,
           new: newCustomers
         },
-        averageAppointmentValue,
+        averageAppointmentValue: avgAppointmentValue,
         cancellationRate
       },
       popularServices,
