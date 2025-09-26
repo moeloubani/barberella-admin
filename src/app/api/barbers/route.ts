@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     // Get appointment stats for each barber
     const barbersWithStats = await Promise.all(
-      barbers.map(async (barber) => {
+      barbers.map(async (barber: any) => {
         const [totalAppointments, todayAppointments, revenue] = await Promise.all([
           prisma.appointments.count({
             where: { barber_id: barber.id }

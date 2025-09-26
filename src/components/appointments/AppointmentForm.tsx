@@ -171,7 +171,7 @@ export function AppointmentForm({
                 placeholder="John Doe"
               />
               {errors.customer_name && (
-                <p className="text-sm text-red-500">{errors.customer_name.message}</p>
+                <p className="text-sm text-red-500">{String(errors.customer_name.message)}</p>
               )}
             </div>
 
@@ -189,7 +189,7 @@ export function AppointmentForm({
                 placeholder="+1 234 567 8900"
               />
               {errors.phone_number && (
-                <p className="text-sm text-red-500">{errors.phone_number.message}</p>
+                <p className="text-sm text-red-500">{String(errors.phone_number.message)}</p>
               )}
             </div>
           </div>
@@ -216,7 +216,7 @@ export function AppointmentForm({
                 </SelectContent>
               </Select>
               {errors.service && (
-                <p className="text-sm text-red-500">{errors.service.message}</p>
+                <p className="text-sm text-red-500">{String(errors.service.message)}</p>
               )}
             </div>
 
@@ -275,7 +275,7 @@ export function AppointmentForm({
                 </SelectContent>
               </Select>
               {errors.time && (
-                <p className="text-sm text-red-500">{errors.time.message}</p>
+                <p className="text-sm text-red-500">{String(errors.time.message)}</p>
               )}
             </div>
 
@@ -313,7 +313,7 @@ export function AppointmentForm({
                 placeholder="30"
               />
               {errors.duration && (
-                <p className="text-sm text-red-500">{errors.duration.message}</p>
+                <p className="text-sm text-red-500">{String(errors.duration.message)}</p>
               )}
             </div>
 

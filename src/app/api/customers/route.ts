@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     // Get appointment history for each customer
     const customersWithHistory = await Promise.all(
-      customers.map(async (customer) => {
+      customers.map(async (customer: any) => {
         const appointments = await prisma.appointments.findMany({
           where: { phone_number: customer.phone_number },
           orderBy: { date: 'desc' },

@@ -77,11 +77,11 @@ export async function GET(req: NextRequest) {
 
     // Calculate revenue
     const currentRevenue = currentAppointments.reduce(
-      (sum, apt) => sum + (apt.price || 0),
+      (sum: number, apt: any) => sum + (apt.price || 0),
       0
     );
     const previousRevenue = previousAppointments.reduce(
-      (sum, apt) => sum + (apt.price || 0),
+      (sum: number, apt: any) => sum + (apt.price || 0),
       0
     );
     const revenueChange = previousRevenue > 0
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
       : 0;
 
     // Get unique customers
-    const currentCustomers = new Set(currentAppointments.map(apt => apt.phone_number)).size;
+    const currentCustomers = new Set(currentAppointments.map((apt: any) => apt.phone_number)).size;
     const totalCustomers = await prisma.customers.count();
 
     // Get new customers this period
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
     const avgAppointmentValue = currentCount > 0 ? currentRevenue / currentCount : 0;
 
     // Get popular services
-    const serviceStats = currentAppointments.reduce((acc: any, apt) => {
+    const serviceStats = currentAppointments.reduce((acc: any, apt: any) => {
       if (!acc[apt.service]) {
         acc[apt.service] = { count: 0, revenue: 0 };
       }
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
       .slice(0, 5);
 
     // Get barber performance
-    const barberStats = currentAppointments.reduce((acc: any, apt) => {
+    const barberStats = currentAppointments.reduce((acc: any, apt: any) => {
       if (apt.barber) {
         if (!acc[apt.barber.id]) {
           acc[apt.barber.id] = {
@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
 
     // Get daily revenue for chart
     const dailyRevenue: any = {};
-    currentAppointments.forEach(apt => {
+    currentAppointments.forEach((apt: any) => {
       const dateKey = apt.date.toISOString().split('T')[0];
       if (!dailyRevenue[dateKey]) {
         dailyRevenue[dateKey] = 0;
@@ -178,13 +178,13 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const statusBreakdown = allAppointments.reduce((acc: any, apt) => {
+    const statusBreakdown = allAppointments.reduce((acc: any, apt: any) => {
       acc[apt.status] = (acc[apt.status] || 0) + 1;
       return acc;
     }, {});
 
     // Get peak hours
-    const hourlyStats = currentAppointments.reduce((acc: any, apt) => {
+    const hourlyStats = currentAppointments.reduce((acc: any, apt: any) => {
       const hour = apt.time.split(':')[0];
       acc[hour] = (acc[hour] || 0) + 1;
       return acc;
