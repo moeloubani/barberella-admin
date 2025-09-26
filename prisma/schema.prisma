@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model appointments {
+  id            String   @id @default(cuid())
+  customer_name String
+  phone_number  String
+  service       String
+  barber_id     String?
+  date          DateTime
+  time          String
+  duration      Int      @default(30) // in minutes
+  status        String   @default("confirmed")
+  notes         String?
+  price         Float?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  barber        barbers? @relation(fields: [barber_id], references: [id])
+
+  @@index([date, status])
+  @@index([phone_number])
+  @@index([barber_id])
+}
+
+model customers {
+  id            String   @id @default(cuid())
+  name          String
+  phone_number  String   @unique
+  email         String?
+  notes         String?
+  total_visits  Int      @default(0)
+  last_visit    DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([phone_number])
+  @@index([name])
+}
+
+model barbers {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String
+  specialties  String[] @default([])
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  appointments appointments[]
+
+  @@index([email])
+  @@index([is_active])
+}
+
+model call_logs {
+  id            String   @id @default(cuid())
+  phone_number  String
+  call_duration Int?
+  transcript    String?
+  booking_made  Boolean  @default(false)
+  appointment_id String?
+  created_at    DateTime @default(now())
+
+  @@index([phone_number])
+  @@index([created_at])
+}
+
+model settings {
+  id                String   @id @default(cuid())
+  shop_name         String   @default("Barberella")
+  opening_time      String   @default("09:00")
+  closing_time      String   @default("19:00")
+  slot_duration     Int      @default(30) // in minutes
+  days_open         String[] @default(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
+  max_advance_days  Int      @default(30)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  name          String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
