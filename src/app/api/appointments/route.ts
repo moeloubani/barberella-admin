@@ -52,26 +52,31 @@ export async function GET(req: NextRequest) {
     });
 
     // Transform to match frontend expectations
-    const transformed = appointments.map(apt => ({
-      id: apt.id,
-      customer_name: apt.client_name,
-      phone_number: apt.client_phone,
-      service: apt.service,
-      barber_id: apt.barber_id,
-      barber: apt.barber,
-      date: apt.start_time,
-      time: apt.start_time.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }),
-      duration: Math.round((apt.end_time.getTime() - apt.start_time.getTime()) / (1000 * 60)),
-      status: apt.status,
-      notes: apt.notes,
-      price: getServicePrice(apt.service),
-      confirmation_code: apt.confirmation_code,
-      created_at: apt.created_at
-    }));
+    const transformed = appointments.map(apt => {
+      const startTime = new Date(apt.start_time);
+      const endTime = new Date(apt.end_time);
+
+      return {
+        id: apt.id,
+        customer_name: apt.client_name,
+        phone_number: apt.client_phone,
+        service: apt.service,
+        barber_id: apt.barber_id,
+        barber: apt.barber,
+        date: startTime.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        time: startTime.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        duration: Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)),
+        status: apt.status,
+        notes: apt.notes,
+        price: getServicePrice(apt.service),
+        confirmation_code: apt.confirmation_code,
+        created_at: apt.created_at
+      };
+    });
 
     return NextResponse.json(transformed);
   } catch (error) {

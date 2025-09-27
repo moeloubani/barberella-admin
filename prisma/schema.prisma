@@ -60,3 +60,28 @@ model admin_users {
   created_at    DateTime  @default(now())
   last_login    DateTime?
 }
+
+model settings {
+  id               Int       @id @default(autoincrement())
+  shop_name        String    @default("Barberella")
+  opening_time     String    @default("09:00")
+  closing_time     String    @default("19:00")
+  slot_duration    Int       @default(30)
+  days_open        String[]  @default(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
+  max_advance_days Int       @default(30)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+}
+
+model services {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  duration    Int       @default(30) // Duration in minutes
+  price       Float     @default(0)
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([is_active])
+}
