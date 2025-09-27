@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     // Get current period appointments
     const currentAppointments = await prisma.appointments.findMany({
       where: {
-        date: {
+        start_time: {
           gte: startDate,
           lte: endDate
         },
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     const previousAppointments = await prisma.appointments.findMany({
       where: {
-        date: {
+        start_time: {
           gte: previousStartDate,
           lte: previousEndDate
         },
@@ -75,13 +75,23 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Calculate revenue
+    // Calculate revenue based on service type
+    const getServicePrice = (service: string) => {
+      const prices: Record<string, number> = {
+        'haircut': 30,
+        'beard': 20,
+        'haircut_and_beard': 45,
+        'haircut and beard': 45
+      };
+      return prices[service] || 30;
+    };
+
     const currentRevenue = currentAppointments.reduce(
-      (sum: number, apt: any) => sum + (apt.price || 0),
+      (sum: number, apt: any) => sum + getServicePrice(apt.service),
       0
     );
     const previousRevenue = previousAppointments.reduce(
-      (sum: number, apt: any) => sum + (apt.price || 0),
+      (sum: number, apt: any) => sum + getServicePrice(apt.service),
       0
     );
     const revenueChange = previousRevenue > 0
@@ -95,18 +105,29 @@ export async function GET(req: NextRequest) {
       ? ((currentCount - previousCount) / previousCount) * 100
       : 0;
 
-    // Get unique customers
-    const currentCustomers = new Set(currentAppointments.map((apt: any) => apt.phone_number)).size;
-    const totalCustomers = await prisma.customers.count();
+    // Get unique customers from appointments
+    const currentCustomers = new Set(currentAppointments.map((apt: any) => apt.client_phone)).size;
 
-    // Get new customers this period
-    const newCustomers = await prisma.customers.count({
-      where: {
+    // Get total unique customers from all appointments
+    const allCustomerPhones = await prisma.appointments.findMany({
+      select: { client_phone: true },
+      distinct: ['client_phone']
+    });
+    const totalCustomers = allCustomerPhones.length;
+
+    // Get new customers this period (first appointment in this period)
+    const newCustomerPhones = await prisma.appointments.groupBy({
+      by: ['client_phone'],
+      _min: { created_at: true },
+      having: {
         created_at: {
-          gte: startDate
+          _min: {
+            gte: startDate
+          }
         }
       }
     });
+    const newCustomers = newCustomerPhones.length;
 
     // Calculate average appointment value
     const avgAppointmentValue = currentCount > 0 ? currentRevenue / currentCount : 0;
@@ -117,7 +138,7 @@ export async function GET(req: NextRequest) {
         acc[apt.service] = { count: 0, revenue: 0 };
       }
       acc[apt.service].count++;
-      acc[apt.service].revenue += apt.price || 0;
+      acc[apt.service].revenue += getServicePrice(apt.service);
       return acc;
     }, {});
 
@@ -141,7 +162,7 @@ export async function GET(req: NextRequest) {
           };
         }
         acc[apt.barber.id].count++;
-        acc[apt.barber.id].revenue += apt.price || 0;
+        acc[apt.barber.id].revenue += getServicePrice(apt.service);
       }
       return acc;
     }, {});
@@ -151,11 +172,11 @@ export async function GET(req: NextRequest) {
     // Get daily revenue for chart
     const dailyRevenue: any = {};
     currentAppointments.forEach((apt: any) => {
-      const dateKey = apt.date.toISOString().split('T')[0];
+      const dateKey = apt.start_time.toISOString().split('T')[0];
       if (!dailyRevenue[dateKey]) {
         dailyRevenue[dateKey] = 0;
       }
-      dailyRevenue[dateKey] += apt.price || 0;
+      dailyRevenue[dateKey] += getServicePrice(apt.service);
     });
 
     const revenueChart = Object.entries(dailyRevenue)
@@ -168,7 +189,7 @@ export async function GET(req: NextRequest) {
     // Get appointment status breakdown
     const allAppointments = await prisma.appointments.findMany({
       where: {
-        date: {
+        start_time: {
           gte: startDate,
           lte: endDate
         }
@@ -185,7 +206,7 @@ export async function GET(req: NextRequest) {
 
     // Get peak hours
     const hourlyStats = currentAppointments.reduce((acc: any, apt: any) => {
-      const hour = apt.time.split(':')[0];
+      const hour = apt.start_time.getHours().toString().padStart(2, '0');
       acc[hour] = (acc[hour] || 0) + 1;
       return acc;
     }, {});
@@ -201,7 +222,7 @@ export async function GET(req: NextRequest) {
     // Get cancellation rate
     const cancelledCount = await prisma.appointments.count({
       where: {
-        date: {
+        start_time: {
           gte: startDate,
           lte: endDate
         },
