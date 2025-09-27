@@ -1,28 +1,28 @@
 import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "./prisma";
-
-// Parse admin emails from environment variable (case-insensitive)
-const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim().toLowerCase()) || [];
+import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        // Check against hardcoded admin credentials
+        if (credentials?.username === 'admin' && credentials?.password === 'barberella2024') {
+          return {
+            id: '1',
+            name: 'Admin',
+            email: 'admin@barberella.com'
+          };
+        }
+        return null;
+      }
+    })
   ],
   callbacks: {
-    async signIn({ user }) {
-      // Only allow sign in if the user's email is in the admin list (case-insensitive)
-      const email = user.email?.toLowerCase();
-      if (email && ADMIN_EMAILS.includes(email)) {
-        return true;
-      }
-      return '/sign-in?error=unauthorized';
-    },
     async session({ session, token }) {
       // Add user ID to session
       if (session.user && token.sub) {
@@ -45,6 +45,6 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'default-secret-change-in-production',
   debug: process.env.NODE_ENV === 'development',
 };
