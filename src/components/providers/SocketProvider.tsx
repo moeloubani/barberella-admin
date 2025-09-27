@@ -27,6 +27,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const socket = initSocket();
 
+    // Socket is disabled for now, so we return early
+    if (!socket) {
+      console.log('Socket connection disabled');
+      return;
+    }
+
     socket.on('connect', () => {
       setIsConnected(true);
       console.log('Socket connected');
@@ -82,7 +88,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribeAppointments();
       unsubscribeCallLogs();
-      socket.disconnect();
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, [queryClient]);
 
