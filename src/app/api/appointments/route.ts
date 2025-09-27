@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(date);
       endDate.setHours(23, 59, 59, 999);
-      where.date = {
+      where.start_time = {
         gte: startDate,
         lte: endDate
       };
@@ -34,25 +34,45 @@ export async function GET(req: NextRequest) {
     }
 
     if (barberId) {
-      where.barber_id = barberId;
+      where.barber_id = parseInt(barberId);
     }
 
     if (phoneNumber) {
-      where.phone_number = phoneNumber;
+      where.client_phone = phoneNumber;
     }
 
     const appointments = await prisma.appointments.findMany({
       where,
       include: {
-        barber: true
+        barber: true,
       },
-      orderBy: [
-        { date: 'asc' },
-        { time: 'asc' }
-      ]
+      orderBy: {
+        start_time: 'asc'
+      }
     });
 
-    return NextResponse.json(appointments);
+    // Transform to match frontend expectations
+    const transformed = appointments.map(apt => ({
+      id: apt.id,
+      customer_name: apt.client_name,
+      phone_number: apt.client_phone,
+      service: apt.service,
+      barber_id: apt.barber_id,
+      barber: apt.barber,
+      date: apt.start_time,
+      time: apt.start_time.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      duration: Math.round((apt.end_time.getTime() - apt.start_time.getTime()) / (1000 * 60)),
+      status: apt.status,
+      notes: apt.notes,
+      price: getServicePrice(apt.service),
+      created_at: apt.created_at
+    }));
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error('Error fetching appointments:', error);
     return NextResponse.json(
@@ -62,7 +82,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST create a new appointment
+// Helper function to get service price
+function getServicePrice(service: string): number {
+  const prices: Record<string, number> = {
+    'haircut': 30,
+    'beard': 20,
+    'haircut_and_beard': 45
+  };
+  return prices[service] || 30;
+}
+
+// POST - Create new appointment
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession();
@@ -71,81 +101,32 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const {
-      customer_name,
-      phone_number,
-      service,
-      barber_id,
-      date,
-      time,
-      duration,
-      notes,
-      price,
-      status = 'confirmed'
-    } = body;
 
-    // Validate required fields
-    if (!customer_name || !phone_number || !service || !date || !time) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    // Convert date and time to start_time and end_time
+    const startTime = new Date(body.date);
+    const [hours, minutes] = body.time.split(':');
+    startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-    // Check if the slot is available
-    const existingAppointment = await prisma.appointments.findFirst({
-      where: {
-        date: new Date(date),
-        time,
-        barber_id,
-        status: {
-          notIn: ['cancelled']
-        }
-      }
-    });
+    const endTime = new Date(startTime);
+    endTime.setMinutes(endTime.getMinutes() + (body.duration || 30));
 
-    if (existingAppointment) {
-      return NextResponse.json(
-        { error: 'This time slot is already booked' },
-        { status: 409 }
-      );
-    }
-
-    // Create appointment
     const appointment = await prisma.appointments.create({
       data: {
-        customer_name,
-        phone_number,
-        service,
-        barber_id,
-        date: new Date(date),
-        time,
-        duration: duration || 30,
-        notes,
-        price,
-        status
+        client_name: body.customer_name,
+        client_phone: body.phone_number,
+        service: body.service,
+        barber_id: body.barber_id ? parseInt(body.barber_id) : undefined,
+        start_time: startTime,
+        end_time: endTime,
+        status: body.status || 'confirmed',
+        notes: body.notes
       },
       include: {
         barber: true
       }
     });
 
-    // Update or create customer record
-    await prisma.customers.upsert({
-      where: { phone_number },
-      update: {
-        last_visit: new Date(date),
-        total_visits: { increment: 1 }
-      },
-      create: {
-        name: customer_name,
-        phone_number,
-        total_visits: 1,
-        last_visit: new Date(date)
-      }
-    });
-
-    return NextResponse.json(appointment, { status: 201 });
+    return NextResponse.json(appointment);
   } catch (error) {
     console.error('Error creating appointment:', error);
     return NextResponse.json(
@@ -155,7 +136,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT update an appointment
+// PUT - Update appointment
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession();
@@ -173,47 +154,48 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Check if appointment exists
-    const existingAppointment = await prisma.appointments.findUnique({
-      where: { id }
-    });
-
-    if (!existingAppointment) {
-      return NextResponse.json(
-        { error: 'Appointment not found' },
-        { status: 404 }
-      );
-    }
-
-    // If date or time is being changed, check for conflicts
-    if (updateData.date || updateData.time || updateData.barber_id) {
-      const conflictCheck = await prisma.appointments.findFirst({
-        where: {
-          id: { not: id },
-          date: updateData.date ? new Date(updateData.date) : existingAppointment.date,
-          time: updateData.time || existingAppointment.time,
-          barber_id: updateData.barber_id || existingAppointment.barber_id,
-          status: {
-            notIn: ['cancelled']
-          }
-        }
+    // Handle date/time updates if provided
+    if (updateData.date || updateData.time) {
+      const existing = await prisma.appointments.findUnique({
+        where: { id: parseInt(id) }
       });
 
-      if (conflictCheck) {
+      if (!existing) {
         return NextResponse.json(
-          { error: 'This time slot is already booked' },
-          { status: 409 }
+          { error: 'Appointment not found' },
+          { status: 404 }
         );
       }
+
+      const startTime = updateData.date ? new Date(updateData.date) : existing.start_time;
+      if (updateData.time) {
+        const [hours, minutes] = updateData.time.split(':');
+        startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + (updateData.duration || 30));
+
+      updateData.start_time = startTime;
+      updateData.end_time = endTime;
+      delete updateData.date;
+      delete updateData.time;
+      delete updateData.duration;
     }
 
-    // Update appointment
+    // Map frontend fields to database fields
+    if (updateData.customer_name) {
+      updateData.client_name = updateData.customer_name;
+      delete updateData.customer_name;
+    }
+    if (updateData.phone_number) {
+      updateData.client_phone = updateData.phone_number;
+      delete updateData.phone_number;
+    }
+
     const appointment = await prisma.appointments.update({
-      where: { id },
-      data: {
-        ...updateData,
-        date: updateData.date ? new Date(updateData.date) : undefined
-      },
+      where: { id: parseInt(id) },
+      data: updateData,
       include: {
         barber: true
       }
@@ -229,7 +211,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE an appointment
+// DELETE - Delete appointment
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession();
@@ -247,24 +229,11 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Check if appointment exists
-    const existingAppointment = await prisma.appointments.findUnique({
-      where: { id }
-    });
-
-    if (!existingAppointment) {
-      return NextResponse.json(
-        { error: 'Appointment not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete appointment
     await prisma.appointments.delete({
-      where: { id }
+      where: { id: parseInt(id) }
     });
 
-    return NextResponse.json({ message: 'Appointment deleted successfully' });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting appointment:', error);
     return NextResponse.json(

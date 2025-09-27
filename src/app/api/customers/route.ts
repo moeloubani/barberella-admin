@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 
-// GET all customers with optional search
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
@@ -10,69 +9,82 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get unique customers from appointments
+    const appointments = await prisma.appointments.findMany({
+      select: {
+        client_name: true,
+        client_phone: true,
+        created_at: true,
+        service: true,
+        status: true,
+        start_time: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    // Group by phone number to get unique customers
+    const customersMap = new Map();
+
+    appointments.forEach(apt => {
+      if (!customersMap.has(apt.client_phone)) {
+        customersMap.set(apt.client_phone, {
+          id: apt.client_phone, // Use phone as ID since we don't have a customers table
+          name: apt.client_name,
+          phone_number: apt.client_phone,
+          total_visits: 0,
+          completed_visits: 0,
+          total_spent: 0,
+          last_visit: null,
+          created_at: apt.created_at
+        });
+      }
+
+      const customer = customersMap.get(apt.client_phone);
+      customer.total_visits++;
+
+      if (apt.status === 'completed' || apt.status === 'confirmed') {
+        customer.completed_visits++;
+        customer.total_spent += getServicePrice(apt.service);
+
+        if (!customer.last_visit || apt.start_time > customer.last_visit) {
+          customer.last_visit = apt.start_time;
+        }
+      }
+
+      // Update earliest created_at
+      if (apt.created_at < customer.created_at) {
+        customer.created_at = apt.created_at;
+      }
+    });
+
+    const customers = Array.from(customersMap.values())
+      .sort((a, b) => b.total_visits - a.total_visits);
+
+    // Apply search filter if provided
     const searchParams = req.nextUrl.searchParams;
     const search = searchParams.get('search');
+
+    let filteredCustomers = customers;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredCustomers = customers.filter(c =>
+        c.name.toLowerCase().includes(searchLower) ||
+        c.phone_number.includes(search)
+      );
+    }
+
+    // Apply pagination
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone_number: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-
-    const [customers, totalCount] = await Promise.all([
-      prisma.customers.findMany({
-        where,
-        orderBy: [
-          { last_visit: 'desc' },
-          { name: 'asc' }
-        ],
-        take: limit,
-        skip: offset
-      }),
-      prisma.customers.count({ where })
-    ]);
-
-    // Get appointment history for each customer
-    const customersWithHistory = await Promise.all(
-      customers.map(async (customer: any) => {
-        const appointments = await prisma.appointments.findMany({
-          where: { phone_number: customer.phone_number },
-          orderBy: { date: 'desc' },
-          take: 5,
-          include: {
-            barber: {
-              select: { name: true }
-            }
-          }
-        });
-
-        const totalSpent = await prisma.appointments.aggregate({
-          where: {
-            phone_number: customer.phone_number,
-            status: 'completed'
-          },
-          _sum: {
-            price: true
-          }
-        });
-
-        return {
-          ...customer,
-          recent_appointments: appointments,
-          total_spent: totalSpent._sum.price || 0
-        };
-      })
-    );
+    const paginatedCustomers = filteredCustomers.slice(offset, offset + limit);
 
     return NextResponse.json({
-      customers: customersWithHistory,
-      totalCount,
+      customers: paginatedCustomers,
+      totalCount: filteredCustomers.length,
+      total: filteredCustomers.length,
       limit,
       offset
     });
@@ -85,78 +97,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST create or update a customer
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { name, phone_number, email, notes } = body;
-
-    if (!name || !phone_number) {
-      return NextResponse.json(
-        { error: 'Name and phone number are required' },
-        { status: 400 }
-      );
-    }
-
-    const customer = await prisma.customers.upsert({
-      where: { phone_number },
-      update: {
-        name,
-        email,
-        notes
-      },
-      create: {
-        name,
-        phone_number,
-        email,
-        notes
-      }
-    });
-
-    return NextResponse.json(customer);
-  } catch (error) {
-    console.error('Error creating/updating customer:', error);
-    return NextResponse.json(
-      { error: 'Failed to create/update customer' },
-      { status: 500 }
-    );
-  }
-}
-
-// PUT update a customer
-export async function PUT(req: NextRequest) {
-  try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { id, ...updateData } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Customer ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const customer = await prisma.customers.update({
-      where: { id },
-      data: updateData
-    });
-
-    return NextResponse.json(customer);
-  } catch (error) {
-    console.error('Error updating customer:', error);
-    return NextResponse.json(
-      { error: 'Failed to update customer' },
-      { status: 500 }
-    );
-  }
+function getServicePrice(service: string): number {
+  const prices: Record<string, number> = {
+    'haircut': 30,
+    'beard': 20,
+    'haircut_and_beard': 45,
+    'haircut and beard': 45
+  };
+  return prices[service] || 30;
 }

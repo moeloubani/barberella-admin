@@ -200,13 +200,13 @@ export function AppointmentCalendar({
           toolbar: CustomToolbar,
         }}
         formats={{
-          timeGutterFormat: 'h:mm A',
+          timeGutterFormat: 'h:mm a',
           eventTimeRangeFormat: ({ start, end }: any, culture: any, localizer: any) =>
-            localizer.format(start, 'h:mm A', culture) + ' - ' +
-            localizer.format(end, 'h:mm A', culture),
+            localizer.format(start, 'h:mm a', culture) + ' - ' +
+            localizer.format(end, 'h:mm a', culture),
           agendaTimeRangeFormat: ({ start, end }: any, culture: any, localizer: any) =>
-            localizer.format(start, 'h:mm A', culture) + ' - ' +
-            localizer.format(end, 'h:mm A', culture),
+            localizer.format(start, 'h:mm a', culture) + ' - ' +
+            localizer.format(end, 'h:mm a', culture),
         }}
         views={['month', 'week', 'day']}
         step={30}
