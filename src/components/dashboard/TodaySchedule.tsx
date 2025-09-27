@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, User, Phone, Scissors } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Scissors, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ interface Barber {
 interface TodayScheduleProps {
   appointments: Appointment[];
   barbers: Barber[];
+  onEditAppointment?: (appointment: Appointment) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -53,7 +55,7 @@ const serviceIcons: Record<string, string> = {
   combo: '✂️🧔',
 };
 
-export function TodaySchedule({ appointments, barbers }: TodayScheduleProps) {
+export function TodaySchedule({ appointments, barbers, onEditAppointment }: TodayScheduleProps) {
   const [selectedBarberId, setSelectedBarberId] = useState<string>('all');
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
 
@@ -272,6 +274,17 @@ export function TodaySchedule({ appointments, barbers }: TodayScheduleProps) {
                         </div>
                       </div>
                     </div>
+
+                    {onEditAppointment && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEditAppointment(appointment)}
+                        className="ml-2"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

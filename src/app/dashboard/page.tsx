@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Calendar, Users, DollarSign, TrendingUp, Plus, UserPlus, BarChart3, Settings } from 'lucide-react';
 import { TodaySchedule } from '@/components/dashboard/TodaySchedule';
 
 export default function DashboardPage() {
+  const router = useRouter();
   // Fetch appointments
   const { data: appointments = [] } = useQuery({
     queryKey: ['dashboard-appointments'],
@@ -169,7 +172,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Today's Schedule */}
-      <TodaySchedule appointments={appointments} barbers={barbers} />
+      <TodaySchedule
+        appointments={appointments}
+        barbers={barbers}
+        onEditAppointment={(appointment) => {
+          // Navigate to appointments page with the appointment selected
+          router.push(`/dashboard/appointments?edit=${appointment.id}`);
+        }}
+      />
 
       {/* Appointment Status Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

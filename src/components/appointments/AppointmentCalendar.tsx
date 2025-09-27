@@ -228,6 +228,8 @@ export function AppointmentCalendar({
         step={30}
         showMultiDayTimes
         defaultView="week"
+        min={new Date(0, 0, 0, 9, 0, 0)}  // 9:00 AM
+        max={new Date(0, 0, 0, 21, 0, 0)} // 9:00 PM
       />
     </div>
   );
