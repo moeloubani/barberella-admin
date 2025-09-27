@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
 }
 
 @theme inline {
@@ -12,15 +12,76 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Remove dark mode - admin panel should be light only */
+body {
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-geist-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Ensure proper text colors */
+h1, h2, h3, h4, h5, h6 {
+  color: #111827; /* gray-900 */
+  font-weight: 600;
 }
+
+p {
+  color: #374151; /* gray-700 */
+}
+
+/* Fix input and form colors */
+input, textarea, select {
+  color: #111827; /* gray-900 */
+  background-color: #ffffff;
+}
+
+/* Ensure buttons have proper contrast */
+button {
+  color: inherit;
+}
+
+/* Fix table text colors */
+table {
+  color: #111827;
+}
+
+/* Override any inherited light text colors */
+.text-muted-foreground {
+  color: #6b7280 !important; /* gray-500 */
+}
+
+/* Fix Tailwind text color utilities */
+.text-gray-900 { color: #111827 !important; }
+.text-gray-800 { color: #1f2937 !important; }
+.text-gray-700 { color: #374151 !important; }
+.text-gray-600 { color: #4b5563 !important; }
+.text-gray-500 { color: #6b7280 !important; }
+.text-gray-400 { color: #9ca3af !important; }
+
+/* Fix any opacity issues */
+* {
+  opacity: 1 !important; /* Reset all opacity */
+}
+
+/* Only apply opacity where explicitly needed */
+.opacity-60 { opacity: 0.6 !important; }
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-0 { opacity: 0 !important; }
+
+/* Ensure disabled elements are visible but styled appropriately */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed;
+}
+
+/* Fix any color inheritance issues */
+div, span, p, h1, h2, h3, h4, h5, h6, td, th, li, a {
+  color: inherit;
+}
+
+/* Specific fixes for common text elements */
+.text-black { color: #000000 !important; }
+.text-white { color: #ffffff !important; }
