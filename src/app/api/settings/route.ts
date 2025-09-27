@@ -4,10 +4,8 @@ import { getServerSession } from 'next-auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Allow public access for reading settings (needed for phone booking system)
+    // No authentication required for GET requests
 
     // Get settings from database or create default
     let settings = await prisma.settings.findFirst();
