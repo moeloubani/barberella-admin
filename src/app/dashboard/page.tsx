@@ -1,7 +1,62 @@
-import { requireAuth } from '@/lib/auth-utils';
+'use client';
 
-export default async function DashboardPage() {
-  const session = await requireAuth();
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import Link from 'next/link';
+import { Calendar, Users, DollarSign, TrendingUp, Plus, UserPlus, BarChart3, Settings } from 'lucide-react';
+
+export default function DashboardPage() {
+  // Fetch appointments
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['dashboard-appointments'],
+    queryFn: async () => {
+      const response = await axios.get('/api/appointments');
+      return response.data;
+    },
+  });
+
+  // Fetch barbers
+  const { data: barbers = [] } = useQuery({
+    queryKey: ['dashboard-barbers'],
+    queryFn: async () => {
+      const response = await axios.get('/api/barbers');
+      return response.data;
+    },
+  });
+
+  // Fetch customers
+  const { data: customersData } = useQuery({
+    queryKey: ['dashboard-customers'],
+    queryFn: async () => {
+      const response = await axios.get('/api/customers?limit=1000');
+      return response.data;
+    },
+  });
+
+  // Calculate stats
+  const totalBookings = appointments.length;
+  const todayBookings = appointments.filter((apt: any) => {
+    const aptDate = new Date(apt.date);
+    const today = new Date();
+    return aptDate.toDateString() === today.toDateString();
+  }).length;
+
+  const activeBarbers = barbers.filter((b: any) => b.is_active).length;
+
+  // Calculate revenue from all appointments (not just completed)
+  const totalRevenue = appointments.reduce((sum: number, apt: any) => {
+    // Include all appointments except cancelled ones in revenue
+    if (apt.status !== 'cancelled') {
+      return sum + (apt.price || 0);
+    }
+    return sum;
+  }, 0);
+
+  const completedAppointments = appointments.filter((apt: any) => apt.status === 'completed').length;
+  const cancelledAppointments = appointments.filter((apt: any) => apt.status === 'cancelled').length;
+  const confirmedAppointments = appointments.filter((apt: any) => apt.status === 'confirmed').length;
+
+  const totalCustomers = customersData?.totalCount || 0;
 
   return (
     <div className="space-y-6">
@@ -9,16 +64,16 @@ export default async function DashboardPage() {
       <div className="bg-white overflow-hidden shadow-sm rounded-lg">
         <div className="px-6 py-8">
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {session.user?.name || 'Admin'}!
+            Welcome back, Admin!
           </h1>
           <p className="mt-2 text-gray-600">
-            You are successfully authenticated and can access the admin dashboard.
+            Here's an overview of your barbershop's performance.
           </p>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Main Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white overflow-hidden shadow-sm rounded-lg">
           <div className="px-6 py-6">
             <div className="flex items-center">
@@ -27,14 +82,38 @@ export default async function DashboardPage() {
                   Total Bookings
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  0
+                  {totalBookings}
                 </dd>
+                <p className="text-xs text-gray-500 mt-1">
+                  {todayBookings} today
+                </p>
               </div>
               <div className="ml-4 flex-shrink-0">
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <Calendar className="h-6 w-6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
+          <div className="px-6 py-6">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <dt className="text-sm font-medium text-gray-500 truncate">
+                  Total Customers
+                </dt>
+                <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                  {totalCustomers}
+                </dd>
+                <p className="text-xs text-gray-500 mt-1">
+                  Unique clients
+                </p>
+              </div>
+              <div className="ml-4 flex-shrink-0">
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                  <Users className="h-6 w-6" />
                 </div>
               </div>
             </div>
@@ -49,14 +128,15 @@ export default async function DashboardPage() {
                   Active Barbers
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  0
+                  {activeBarbers}
                 </dd>
+                <p className="text-xs text-gray-500 mt-1">
+                  {barbers.length} total
+                </p>
               </div>
               <div className="ml-4 flex-shrink-0">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white">
+                  <UserPlus className="h-6 w-6" />
                 </div>
               </div>
             </div>
@@ -71,14 +151,15 @@ export default async function DashboardPage() {
                   Revenue
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  $0
+                  ${totalRevenue}
                 </dd>
+                <p className="text-xs text-gray-500 mt-1">
+                  Excluding cancelled
+                </p>
               </div>
               <div className="ml-4 flex-shrink-0">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                  <DollarSign className="h-6 w-6" />
                 </div>
               </div>
             </div>
@@ -86,41 +167,75 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
+      {/* Appointment Status Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Appointment Status</h2>
+          </div>
+          <div className="px-6 py-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Confirmed</span>
+                <span className="text-sm font-medium text-green-600">{confirmedAppointments}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Completed</span>
+                <span className="text-sm font-medium text-blue-600">{completedAppointments}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Cancelled</span>
+                <span className="text-sm font-medium text-red-600">{cancelledAppointments}</span>
+              </div>
+              <div className="pt-3 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-900">Total</span>
+                  <span className="text-sm font-bold text-gray-900">{totalBookings}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="px-6 py-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <svg className="h-8 w-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              <span className="text-sm text-gray-600">Add Booking</span>
-            </button>
 
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <svg className="h-8 w-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              <span className="text-sm text-gray-600">Add Barber</span>
-            </button>
+        {/* Quick Actions */}
+        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
+          </div>
+          <div className="px-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Link
+                href="/dashboard/appointments"
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
+              >
+                <Plus className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                <span className="text-sm text-gray-600">Add Booking</span>
+              </Link>
 
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <svg className="h-8 w-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className="text-sm text-gray-600">View Reports</span>
-            </button>
+              <Link
+                href="/dashboard/settings"
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
+              >
+                <UserPlus className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                <span className="text-sm text-gray-600">Add Barber</span>
+              </Link>
 
-            <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <svg className="h-8 w-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="text-sm text-gray-600">Settings</span>
-            </button>
+              <Link
+                href="/dashboard/analytics"
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
+              >
+                <BarChart3 className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                <span className="text-sm text-gray-600">View Reports</span>
+              </Link>
+
+              <Link
+                href="/dashboard/settings"
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
+              >
+                <Settings className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                <span className="text-sm text-gray-600">Settings</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
