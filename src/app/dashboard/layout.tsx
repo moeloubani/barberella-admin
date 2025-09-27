@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth-utils';
 import UserAvatar from '@/components/auth/UserAvatar';
 import SignOutButton from '@/components/auth/SignOutButton';
 import Link from 'next/link';
-import { Calendar, Users, BarChart3, Settings, PhoneCall } from 'lucide-react';
+import { Calendar, Users, BarChart3, Settings, PhoneCall, Scissors } from 'lucide-react';
 
 export default async function DashboardLayout({
   children,
@@ -26,6 +26,11 @@ export default async function DashboardLayout({
       href: '/dashboard/customers',
       label: 'Customers',
       icon: Users,
+    },
+    {
+      href: '/dashboard/services',
+      label: 'Services',
+      icon: Scissors,
     },
     {
       href: '/dashboard/analytics',

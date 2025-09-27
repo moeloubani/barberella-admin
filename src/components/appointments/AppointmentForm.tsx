@@ -32,15 +32,14 @@ interface AppointmentFormProps {
   appointment?: any;
   barbers?: any[];
   settings?: any;
+  services?: any[];
 }
 
-const SERVICES = [
-  { value: 'haircut', label: 'Haircut', price: 30 },
-  { value: 'beard_trim', label: 'Beard Trim', price: 20 },
-  { value: 'haircut_beard', label: 'Haircut & Beard', price: 45 },
-  { value: 'hair_coloring', label: 'Hair Coloring', price: 60 },
-  { value: 'hair_treatment', label: 'Hair Treatment', price: 40 },
-  { value: 'shave', label: 'Classic Shave', price: 25 },
+// Fallback services if none from database
+const DEFAULT_SERVICES = [
+  { id: 1, name: 'Haircut', duration: 30, price: 35 },
+  { id: 2, name: 'Beard Trim', duration: 15, price: 15 },
+  { id: 3, name: 'Haircut & Beard', duration: 45, price: 45 },
 ];
 
 export function AppointmentForm({
@@ -50,6 +49,7 @@ export function AppointmentForm({
   appointment,
   barbers = [],
   settings,
+  services = DEFAULT_SERVICES,
 }: AppointmentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -122,11 +122,12 @@ export function AppointmentForm({
   }, [selectedDate, setValue]);
 
   useEffect(() => {
-    const service = SERVICES.find((s) => s.value === selectedService);
+    const service = services.find((s) => s.name === selectedService);
     if (service) {
       setValue('price', service.price);
+      setValue('duration', service.duration);
     }
-  }, [selectedService, setValue]);
+  }, [selectedService, setValue, services]);
 
   const handleFormSubmit = async (data: any) => {
     setIsSubmitting(true);
@@ -208,9 +209,9 @@ export function AppointmentForm({
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SERVICES.map((service) => (
-                    <SelectItem key={service.value} value={service.value}>
-                      {service.label} - ${service.price}
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.name}>
+                      {service.name} - ${service.price} ({service.duration} min)
                     </SelectItem>
                   ))}
                 </SelectContent>

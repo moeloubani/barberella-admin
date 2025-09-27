@@ -69,6 +69,15 @@ export default function AppointmentsPage() {
     },
   });
 
+  // Fetch services
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const response = await axios.get('/api/services');
+      return response.data.filter((s: any) => s.is_active);
+    },
+  });
+
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -318,6 +327,7 @@ export default function AppointmentsPage() {
         appointment={selectedAppointment}
         barbers={barbers}
         settings={settingsData?.settings}
+        services={services}
       />
     </div>
   );
