@@ -25,9 +25,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Socket is disabled for now - initSocket() always returns null
+    // All socket-related code is commented out until backend WebSocket support is added
+    console.log('Socket connection disabled - backend WebSocket support not available');
+
+    /*
     const socket = initSocket();
 
-    // Socket is disabled for now, so we return early
     if (!socket) {
       console.log('Socket connection disabled');
       return;
@@ -92,6 +96,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         socket.disconnect();
       }
     };
+    */
   }, [queryClient]);
 
   return (
