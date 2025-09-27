@@ -113,9 +113,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Convert date and time to start_time and end_time
-    const startTime = new Date(body.date);
+    // Create date string in ISO format with the provided time
     const [hours, minutes] = body.time.split(':');
-    startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const dateStr = `${body.date}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+    const startTime = new Date(dateStr);
 
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + (body.duration || 30));
