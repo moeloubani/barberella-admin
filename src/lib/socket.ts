@@ -3,6 +3,11 @@ import { io, Socket } from 'socket.io-client';
 let socket: Socket | null = null;
 
 export const initSocket = () => {
+  // Disable socket connection for now - backend doesn't have Socket.io on the same port
+  // Will need to set up a separate WebSocket endpoint or use the existing /media-stream endpoint
+  return null;
+
+  /*
   if (!socket) {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://barberella-production.up.railway.app';
 
@@ -27,37 +32,19 @@ export const initSocket = () => {
   }
 
   return socket;
+  */
 };
 
 export const getSocket = () => {
-  if (!socket) {
-    return initSocket();
-  }
-  return socket;
+  return null; // Disabled for now
 };
 
 export const subscribeToAppointmentUpdates = (callback: (data: any) => void) => {
-  const socketInstance = getSocket();
-
-  socketInstance.on('appointment:created', callback);
-  socketInstance.on('appointment:updated', callback);
-  socketInstance.on('appointment:cancelled', callback);
-
-  return () => {
-    socketInstance.off('appointment:created', callback);
-    socketInstance.off('appointment:updated', callback);
-    socketInstance.off('appointment:cancelled', callback);
-  };
+  // Disabled for now - no socket connection
+  return () => {};
 };
 
 export const subscribeToCallLogs = (callback: (data: any) => void) => {
-  const socketInstance = getSocket();
-
-  socketInstance.on('call:new', callback);
-  socketInstance.on('call:ended', callback);
-
-  return () => {
-    socketInstance.off('call:new', callback);
-    socketInstance.off('call:ended', callback);
-  };
+  // Disabled for now - no socket connection
+  return () => {};
 };
