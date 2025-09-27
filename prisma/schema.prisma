@@ -63,7 +63,7 @@ model admin_users {
 
 model settings {
   id               Int       @id @default(autoincrement())
-  shop_name        String    @default("Barberella")
+  shop_name        String    @default("Fawz")
   opening_time     String    @default("09:00")
   closing_time     String    @default("19:00")
   slot_duration    Int       @default(30)

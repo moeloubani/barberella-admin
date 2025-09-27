@@ -5,16 +5,17 @@ import { getServerSession } from 'next-auth';
 // GET all appointments with optional filters
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const searchParams = req.nextUrl.searchParams;
     const date = searchParams.get('date');
     const status = searchParams.get('status');
     const barberId = searchParams.get('barberId');
     const phoneNumber = searchParams.get('phoneNumber');
+
+    // Allow public access when searching by phone number (needed for phone booking system)
+    const session = await getServerSession();
+    if (!session && !phoneNumber) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const where: any = {};
 
@@ -101,12 +102,15 @@ function getServicePrice(service: string): number {
 // POST - Create new appointment
 export async function POST(req: NextRequest) {
   try {
+    // Allow public access for creating appointments (needed for phone booking system)
+    // Authentication is optional for POST requests
     const session = await getServerSession();
-    if (!session) {
+    // Only require auth if not coming from phone system (check for confirmation_code in body)
+    const body = await req.json();
+
+    if (!session && !body.confirmation_code) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const body = await req.json();
 
     // Convert date and time to start_time and end_time
     const startTime = new Date(body.date);
