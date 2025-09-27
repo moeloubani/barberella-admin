@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Link from 'next/link';
 import { Calendar, Users, DollarSign, TrendingUp, Plus, UserPlus, BarChart3, Settings } from 'lucide-react';
+import { TodaySchedule } from '@/components/dashboard/TodaySchedule';
 
 export default function DashboardPage() {
   // Fetch appointments
@@ -166,6 +167,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Today's Schedule */}
+      <TodaySchedule appointments={appointments} barbers={barbers} />
 
       {/* Appointment Status Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

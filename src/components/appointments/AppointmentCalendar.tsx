@@ -74,9 +74,27 @@ export function AppointmentCalendar({
   useEffect(() => {
     // Convert appointments to calendar events
     const calendarEvents = appointments.map((appointment) => {
-      const [hours, minutes] = appointment.time.split(':').map(Number);
+      // Parse 12-hour time format (e.g., "02:30 PM")
       const startDate = new Date(appointment.date);
-      startDate.setHours(hours, minutes, 0, 0);
+
+      // If time is a string with AM/PM, parse it properly
+      if (typeof appointment.time === 'string' && appointment.time.includes(' ')) {
+        const [time, period] = appointment.time.split(' ');
+        const [hours, minutes] = time.split(':').map(Number);
+        let adjustedHours = hours;
+
+        if (period === 'PM' && hours !== 12) {
+          adjustedHours = hours + 12;
+        } else if (period === 'AM' && hours === 12) {
+          adjustedHours = 0;
+        }
+
+        startDate.setHours(adjustedHours, minutes, 0, 0);
+      } else {
+        // Fallback for 24-hour format
+        const [hours, minutes] = appointment.time.split(':').map(Number);
+        startDate.setHours(hours, minutes, 0, 0);
+      }
 
       const endDate = new Date(startDate);
       endDate.setMinutes(endDate.getMinutes() + (appointment.duration || 30));
