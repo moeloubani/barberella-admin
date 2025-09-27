@@ -159,7 +159,20 @@ export default function AppointmentsPage() {
   };
 
   const handleStatusChange = async (id: string, status: string) => {
-    await updateAppointmentMutation.mutateAsync({ id, status });
+    try {
+      const response = await axios.put(`/api/appointments/${id}/status`, { status });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast({
+        title: 'Success',
+        description: `Appointment status updated to ${status}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to update status',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSelectSlot = (slotInfo: any) => {

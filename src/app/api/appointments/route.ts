@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
       status: apt.status,
       notes: apt.notes,
       price: getServicePrice(apt.service),
+      confirmation_code: apt.confirmation_code,
       created_at: apt.created_at
     }));
 
@@ -110,6 +111,23 @@ export async function POST(req: NextRequest) {
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + (body.duration || 30));
 
+    // Generate a unique 3-digit confirmation code
+    let confirmationCode: string;
+    let isUnique = false;
+
+    while (!isUnique) {
+      confirmationCode = Math.floor(100 + Math.random() * 900).toString();
+      const existing = await prisma.appointments.findFirst({
+        where: {
+          confirmation_code: confirmationCode,
+          start_time: {
+            gte: new Date() // Only check future appointments
+          }
+        }
+      });
+      isUnique = !existing;
+    }
+
     const appointment = await prisma.appointments.create({
       data: {
         client_name: body.customer_name,
@@ -119,7 +137,8 @@ export async function POST(req: NextRequest) {
         start_time: startTime,
         end_time: endTime,
         status: body.status || 'confirmed',
-        notes: body.notes
+        notes: body.notes,
+        confirmation_code: confirmationCode!
       },
       include: {
         barber: true

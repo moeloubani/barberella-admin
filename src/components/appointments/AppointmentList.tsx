@@ -47,6 +47,7 @@ interface Appointment {
   status: string;
   notes?: string;
   price?: number;
+  confirmation_code?: string;
   created_at: string;
   updated_at: string;
 }
@@ -169,6 +170,11 @@ export function AppointmentList({
                   <div className="flex items-center gap-1">
                     <User className="h-3 w-3 text-gray-400" />
                     <span className="font-medium">{appointment.customer_name}</span>
+                    {appointment.confirmation_code && (
+                      <Badge variant="outline" className="ml-2 text-xs font-mono">
+                        #{appointment.confirmation_code}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Phone className="h-3 w-3" />
@@ -188,15 +194,16 @@ export function AppointmentList({
                 {appointment.barber?.name || 'Any Available'}
               </TableCell>
               <TableCell>
-                <Badge
-                  variant="secondary"
-                  className={statusColors[appointment.status as keyof typeof statusColors]}
+                <select
+                  value={appointment.status}
+                  onChange={(e) => onStatusChange(appointment.id, e.target.value)}
+                  className={`px-2 py-1 rounded-md text-sm font-medium border-0 cursor-pointer ${statusColors[appointment.status as keyof typeof statusColors]}`}
                 >
-                  <span className="flex items-center gap-1">
-                    {statusIcons[appointment.status as keyof typeof statusIcons]}
-                    {appointment.status}
-                  </span>
-                </Badge>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="no_show">No Show</option>
+                </select>
               </TableCell>
               <TableCell>
                 {appointment.price ? `$${appointment.price.toFixed(2)}` : '-'}

@@ -8,22 +8,24 @@ datasource db {
 }
 
 model appointments {
-  id              Int       @id @default(autoincrement())
-  barber_id       Int?
-  service         String
-  client_name     String
-  client_phone    String
-  start_time      DateTime
-  end_time        DateTime
-  google_event_id String?
-  status          String    @default("confirmed")
-  notes           String?
-  created_at      DateTime  @default(now())
+  id                Int       @id @default(autoincrement())
+  barber_id         Int?
+  service           String
+  client_name       String
+  client_phone      String
+  start_time        DateTime
+  end_time          DateTime
+  google_event_id   String?
+  status            String    @default("confirmed")
+  notes             String?
+  confirmation_code String?   @db.VarChar(3)
+  created_at        DateTime  @default(now())
 
   barber          barbers?  @relation(fields: [barber_id], references: [id])
 
   @@index([start_time])
   @@index([barber_id, status])
+  @@index([confirmation_code])
 }
 
 model barbers {
